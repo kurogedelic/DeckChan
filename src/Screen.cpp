@@ -57,10 +57,9 @@ static void row(lgfx::LGFX_Sprite& c, const ScreenModel& m, int y, const Bitmap&
 
 static void drawIdle(lgfx::LGFX_Sprite& c, const ScreenModel& m) {
   face.draw(c, m.foreground, m.blink);
-  c.setTextSize(5);
-  c.setTextDatum(top_center);
-  c.drawString(m.clock, c.width() / 2, 182);
-  c.setTextDatum(top_left);
+  // Same spot and size as the dashboard header, so waking doesn't move the clock.
+  c.setTextSize(4);
+  c.drawString(m.clock, 12, 10);
 }
 
 static void drawDashboard(lgfx::LGFX_Sprite& c, const ScreenModel& m) {
