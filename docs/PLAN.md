@@ -34,6 +34,47 @@ The remaining work requires a physical CoreS3/Stack-chan and real service endpoi
 - [ ] Validate chosen Homebridge endpoint/plugin
 - [ ] Validate calendar bridge/auth choice
 
+## Next implementation plan
+
+Order is chosen so each phase is usable on its own. UI changes are checked with
+`sim/render.sh` screenshots before touching hardware.
+
+### Phase 1 — Hardware bring-up (needs the unit)
+1. Upload, confirm boot log: BSP init (IO expander, servos, INA226) and Wi-Fi.
+2. Check readability of the 2.0" panel at arm's length; adjust text sizes if needed.
+3. Head touch: tune `TouchSensor.setSensitivity`, confirm tap vs swipe.
+4. Servo zero positions via the BSP `HomeCalibration` example; tune nod angle/speed.
+5. Brightness defaults (active/idle/night) and battery % curve against real readings.
+
+### Phase 2 — UI polish
+1. Japanese text: switch message/calendar/home rows to `lgfxJapanGothic_16/24`
+   (ASCII stays on the pixel font).
+2. Long text: slow horizontal scroll for rows that do not fit (about 13 chars at 3x).
+3. Face expressions as bitmaps: sleepy at night, surprised when a message arrives,
+   happy on head tap. Mouth/eye variants live next to the default face in `Face.cpp`.
+4. Offline and "no time yet" states: clear icon instead of `--:--` only.
+
+### Phase 3 — Data sources
+1. Weather: Web Editor takes latitude/longitude and builds the Open-Meteo URL
+   (`current=temperature_2m,weather_code`).
+2. Calendar: document a tiny bridge contract (`{"next":"10:30 REVIEW"}`) and ship an
+   example bridge script (ICS → JSON) under `tools/`.
+3. Homebridge: support the homebridge-config-ui-x API (token login, accessory status).
+4. Show per-source errors in the Web Editor status (last fetch time, HTTP code).
+
+### Phase 4 — Safety
+1. Shared secret (set in `secrets.h`) required for `POST /api/config`, `/api/notify`
+   and `/update`; the Web Editor asks for it once and keeps it in the browser.
+2. OTA: check `Update.begin/write/end` results and reject non-firmware uploads.
+
+### Phase 5 — Power
+1. Night: display off after the idle timeout, wake on touch/head tap.
+2. Idle: lower refresh rate for data sources; redraw only when the minute changes.
+
+### Phase 6 — CI
+1. GitHub Actions: `pio run` for the firmware and `sim/render.sh` to upload
+   screenshots as build artifacts.
+
 ## API
 - GET /api/status
 - GET /api/config

@@ -3,7 +3,10 @@
 DeckChan is split into five layers.
 
 ## Display
-M5GFX renders a deliberately low-resolution console aesthetic. Idle rendering is independent of network services.
+M5GFX renders a deliberately low-resolution console aesthetic on the 320x240, 2.0" panel. `Screen.cpp` draws from a plain `ScreenModel` snapshot and has no Arduino dependencies, so `sim/render.sh` can render the same code on a host. The idle face is the m5stack-avatar Stack-chan face as 4 px pixel art (`Face.cpp`); icons are 1-bit bitmaps in `Bitmaps.h`. Idle rendering is independent of network services.
+
+## Hardware
+The official StackChan-BSP (`M5StackChan`) provides head touch, servos, body RGB LEDs and battery readings. It requires arduino-esp32 3.x (pioarduino platform).
 
 ## Widgets
 Small cards render already-normalized state. Widgets never fetch data directly.
