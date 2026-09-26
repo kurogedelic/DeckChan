@@ -1,0 +1,4 @@
+#pragma once
+
+#define DECKCHAN_WIFI_SSID "YOUR_WIFI"
+#define DECKCHAN_WIFI_PASSWORD "YOUR_PASSWORD"
