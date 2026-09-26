@@ -1,12 +1,14 @@
 #pragma once
 #include <M5GFX.h>
+#include <math.h>
 
 // Plain snapshot of everything the screen shows. Kept free of Arduino types so
 // the renderer also builds on the host (see sim/) for screenshots.
 struct ScreenModel {
   const char* clock = "--:--";
-  const char* date = "";
-  const char* weather = "--";
+  float temperature = NAN;   // shown with an icon when known
+  int weatherCode = -1;      // WMO code (Open-Meteo), picks the icon
+  const char* weather = "--"; // fallback text for non-Open-Meteo sources
   const char* calendar = "NO DATA";
   const char* home = "NO DATA";
   const char* message = "";

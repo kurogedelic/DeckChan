@@ -3,6 +3,8 @@
 
 struct DeckData {
   String weather = "--";
+  float temperature = NAN;
+  int weatherCode = -1;
   String calendar = "NO DATA";
   String home = "NO DATA";
   String message = "";

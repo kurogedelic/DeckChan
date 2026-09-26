@@ -16,11 +16,13 @@ DeckChan turns Stack-chan into a quiet always-available desk console: a bitmap f
 
 ## Screens
 
-Rendered on the host from the real drawing code (`sim/render.sh`):
+Rendered on the host from the real drawing code (`sim/render.sh`). The panel is 320x240 (2.0"); images are 2x nearest-neighbour upscales.
 
 | Idle | Dashboard | Message |
 | --- | --- | --- |
 | ![idle](docs/screens/idle-amber.png) | ![dashboard](docs/screens/dashboard-amber.png) | ![message](docs/screens/message-amber.png) |
+
+For weather icons, request `current=temperature_2m,weather_code` from Open-Meteo.
 
 ## Design rules
 

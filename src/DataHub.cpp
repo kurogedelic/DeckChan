@@ -49,9 +49,11 @@ void DataHub::fetchWeather() {
   if (!body.length()) return;
   JsonDocument doc;
   if (deserializeJson(doc, body)) return;
-  // Open-Meteo compatible: current.temperature_2m
+  // Open-Meteo compatible: current.temperature_2m (+ current.weather_code for the icon)
   if (!doc["current"]["temperature_2m"].isNull()) {
-    state.weather = String(doc["current"]["temperature_2m"].as<float>(), 1) + " C";
+    state.temperature = doc["current"]["temperature_2m"].as<float>();
+    state.weatherCode = doc["current"]["weather_code"] | -1;
+    state.weather = String(state.temperature, 1) + " C";
   } else if (!doc["temperature"].isNull()) {
     state.weather = doc["temperature"].as<String>();
   }

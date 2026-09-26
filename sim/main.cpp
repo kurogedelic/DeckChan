@@ -23,8 +23,8 @@ int main(int argc, char** argv) {
   c.setColorDepth(16);
   c.createSprite(320, 240);
   ScreenModel m;
-  m.clock = "09:41"; m.date = "SAT 09/26"; m.online = true; m.batteryPercent = 82;
-  m.weather = "21.4 C"; m.calendar = "10:30 DESIGN REVIEW"; m.home = "LIVING 24C / LIGHTS ON";
+  m.clock = "09:41"; m.online = true; m.batteryPercent = 82;
+  m.temperature = 21.4f; m.weatherCode = 2; m.calendar = "10:30 REVIEW"; m.home = "LIGHTS ON";
   char path[256];
   struct { const char* name; uint16_t fg; } palettes[] = {{"amber", 0xFD20}, {"green", 0x07E0}, {"ice", 0xBFFF}};
   for (auto& p : palettes) {
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     m.dashboard = true;
     drawScreen(c, m); snprintf(path, sizeof(path), "%s/dashboard-%s.ppm", out, p.name); dump(c, path);
   }
-  m.foreground = 0xFD20; m.message = "Laundry is done. The washer finished its cycle.";
+  m.foreground = 0xFD20; m.message = "Laundry is done.";
   drawScreen(c, m); snprintf(path, sizeof(path), "%s/message-amber.ppm", out); dump(c, path);
   return 0;
 }

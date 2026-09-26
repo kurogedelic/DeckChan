@@ -19,10 +19,10 @@ uint32_t lastInteraction=0,lastBlink=0,blinkUntil=0,lastDraw=0; bool dashboard=f
 static int batteryPercent(float v){ return v<1.0f?-1:constrain((int)((v-3.3f)/(4.15f-3.3f)*100),0,100); }
 
 static void drawFrame(){
-  char clock[9]="--:--",date[16]=""; struct tm t;
-  if(getLocalTime(&t,5)){strftime(clock,sizeof(clock),deckConfig.showSeconds?"%H:%M:%S":"%H:%M",&t);strftime(date,sizeof(date),"%a %m/%d",&t);for(char* p=date;*p;p++)*p=toupper(*p);}
+  char clock[9]="--:--"; struct tm t;
+  if(getLocalTime(&t,5)) strftime(clock,sizeof(clock),deckConfig.showSeconds?"%H:%M:%S":"%H:%M",&t);
   const auto& d=dataHub.data(); ScreenModel m;
-  m.clock=clock; m.date=date; m.weather=d.weather.c_str(); m.calendar=d.calendar.c_str(); m.home=d.home.c_str(); m.message=d.message.c_str();
+  m.clock=clock; m.temperature=d.temperature; m.weatherCode=d.weatherCode; m.weather=d.weather.c_str(); m.calendar=d.calendar.c_str(); m.home=d.home.c_str(); m.message=d.message.c_str();
   m.dashboard=dashboard; m.blink=millis()<blinkUntil; m.online=WiFi.status()==WL_CONNECTED;
   m.batteryPercent=batteryPercent(M5StackChan.getBatteryVoltage()); m.charging=M5StackChan.getBatteryCurrent()<-0.01f;
   m.foreground=deckConfig.foreground; m.background=deckConfig.background;
