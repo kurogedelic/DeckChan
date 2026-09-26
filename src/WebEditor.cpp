@@ -5,6 +5,7 @@
 #include <Update.h>
 #include "DeckConfig.h"
 #include "DataHub.h"
+#include <M5StackChan.h>
 
 static WebServer server(80);
 static const char INDEX_HTML[] PROGMEM=R"HTML(
@@ -14,18 +15,20 @@ static const char INDEX_HTML[] PROGMEM=R"HTML(
 <fieldset><legend>DISPLAY</legend><label>Palette<select id=palette><option>amber</option><option>green</option><option>white</option><option>ice</option></select></label><label>Idle after (sec)<input id=idle type=number min=5></label><label>Refresh (sec)<input id=refresh type=number min=30></label><label>Active brightness<input id=activeBrightness type=range min=1 max=255></label><label>Idle brightness<input id=idleBrightness type=range min=1 max=255></label></fieldset>
 <fieldset><legend>SOURCES</legend><label>Weather URL<input id=weatherUrl></label><label>Calendar URL<input id=calendarUrl></label><label>Homebridge URL<input id=homebridgeUrl></label><label>Homebridge token<input id=homebridgeToken type=password placeholder="unchanged if blank"></label></fieldset>
 <fieldset><legend>NIGHT</legend><label>Enabled<input id=nightEnabled type=checkbox></label><label>Start hour<input id=nightStart type=number min=0 max=23></label><label>End hour<input id=nightEnd type=number min=0 max=23></label></fieldset>
-<div class=row><button onclick=save()>SAVE</button><button onclick=refreshData()>REFRESH DATA</button></div><pre id=status></pre>
+<fieldset><legend>BODY</legend><label>Head motion<input id=motion type=checkbox></label><label>RGB LEDs<input id=leds type=checkbox></label></fieldset>
+<div class=row><button onclick=save()>SAVE</button><button onclick=refreshData()>REFRESH DATA</button></div><pre id=msg></pre>
 <script>
 const ids=['palette','idle','refresh','weatherUrl','calendarUrl','homebridgeUrl','activeBrightness','idleBrightness','nightStart','nightEnd'];
-async function load(){let c=await(await fetch('/api/config')).json();ids.forEach(k=>{if(c[k]!==undefined)document.getElementById(k).value=c[k]});nightEnabled.checked=!!c.nightEnabled;let s=await(await fetch('/api/status')).json();net.textContent=s.ip+' // '+s.rssi+' dBm'}
-async function save(){let o={};ids.forEach(k=>o[k]=document.getElementById(k).type==='number'||document.getElementById(k).type==='range'?+document.getElementById(k).value:document.getElementById(k).value);o.nightEnabled=nightEnabled.checked;o.homebridgeToken=homebridgeToken.value;let r=await fetch('/api/config',{method:'POST',body:JSON.stringify(o)});status.textContent=r.ok?'SAVED':'ERROR'}
-async function refreshData(){await fetch('/api/refresh',{method:'POST'});status.textContent='REFRESHED'}load();
+async function load(){let c=await(await fetch('/api/config')).json();ids.forEach(k=>{if(c[k]!==undefined)document.getElementById(k).value=c[k]});nightEnabled.checked=!!c.nightEnabled;motion.checked=!!c.motion;leds.checked=!!c.leds;let s=await(await fetch('/api/status')).json();net.textContent=s.ip+' // '+s.rssi+' dBm // '+s.battery+' V'}
+async function save(){let o={};ids.forEach(k=>o[k]=document.getElementById(k).type==='number'||document.getElementById(k).type==='range'?+document.getElementById(k).value:document.getElementById(k).value);o.nightEnabled=nightEnabled.checked;o.motion=motion.checked;o.leds=leds.checked;o.homebridgeToken=homebridgeToken.value;let r=await fetch('/api/config',{method:'POST',body:JSON.stringify(o)});msg.textContent=r.ok?'SAVED':'ERROR'}
+async function refreshData(){await fetch('/api/refresh',{method:'POST'});msg.textContent='REFRESHED'}load();
 </script></body></html>)HTML";
 
 void WebEditor::begin(){
+  if(started) return; started=true;
   MDNS.begin("deckchan"); MDNS.addService("http","tcp",80);
   server.on("/",[](){server.send_P(200,"text/html",INDEX_HTML);});
-  server.on("/api/status",[](){server.send(200,"application/json","{\"ip\":\""+WiFi.localIP().toString()+"\",\"rssi\":"+String(WiFi.RSSI())+"}");});
+  server.on("/api/status",[](){server.send(200,"application/json","{\"ip\":\""+WiFi.localIP().toString()+"\",\"rssi\":"+String(WiFi.RSSI())+",\"battery\":"+String(M5StackChan.getBatteryVoltage(),2)+"}");});
   server.on("/api/config",HTTP_GET,[](){server.send(200,"application/json",deckConfigJson(false));});
   server.on("/api/config",HTTP_POST,[](){bool ok=updateDeckConfigJson(server.arg("plain"))&&saveDeckConfig();server.send(ok?200:400,"application/json",ok?"{\"ok\":true}":"{\"ok\":false}");});
   server.on("/api/refresh",HTTP_POST,[](){dataHub.refresh();server.send(200,"application/json","{\"ok\":true}");});
@@ -33,4 +36,4 @@ void WebEditor::begin(){
   server.on("/update",HTTP_POST,[](){server.send(Update.hasError()?500:200,"text/plain",Update.hasError()?"FAIL":"OK");if(!Update.hasError()){delay(300);ESP.restart();}},[](){HTTPUpload& u=server.upload();if(u.status==UPLOAD_FILE_START)Update.begin(UPDATE_SIZE_UNKNOWN);else if(u.status==UPLOAD_FILE_WRITE)Update.write(u.buf,u.currentSize);else if(u.status==UPLOAD_FILE_END)Update.end(true);});
   server.begin();
 }
-void WebEditor::loop(){server.handleClient();}
+void WebEditor::loop(){if(started) server.handleClient();}

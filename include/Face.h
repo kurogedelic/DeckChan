@@ -1,7 +1,8 @@
 #pragma once
-#include <M5Unified.h>
+#include <M5GFX.h>
 
+// Stack-chan face (m5stack-avatar geometry) rendered as 4 px pixel art.
 class Face {
 public:
-  void draw(M5Canvas& canvas, int x, int y, uint16_t color, bool blink = false);
+  void draw(lgfx::LGFX_Sprite& canvas, uint16_t color, bool blink = false);
 };

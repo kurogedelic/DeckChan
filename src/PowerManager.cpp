@@ -9,13 +9,13 @@ void PowerManager::begin() {}
 
 void PowerManager::loop(bool idle) {
   struct tm t;
-  bool night = getLocalTime(&t, 2) && deckConfig.nightEnabled &&
+  night = getLocalTime(&t, 2) && deckConfig.nightEnabled &&
                (deckConfig.nightStart < deckConfig.nightEnd
                  ? (t.tm_hour >= deckConfig.nightStart && t.tm_hour < deckConfig.nightEnd)
                  : (t.tm_hour >= deckConfig.nightStart || t.tm_hour < deckConfig.nightEnd));
-  bool shouldDim = night || idle;
-  if (shouldDim != dimmed) {
-    M5.Display.setBrightness(shouldDim ? deckConfig.idleBrightness : deckConfig.activeBrightness);
-    dimmed = shouldDim;
+  int target = (night || idle) ? deckConfig.idleBrightness : deckConfig.activeBrightness;
+  if (target != applied) {  // also picks up brightness edits from the Web Editor
+    M5.Display.setBrightness(target);
+    applied = target;
   }
 }

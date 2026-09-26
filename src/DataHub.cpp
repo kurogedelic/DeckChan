@@ -22,7 +22,13 @@ void DataHub::begin() { refresh(); }
 
 void DataHub::loop() {
   if (millis() - lastRefresh > deckConfig.refreshSeconds * 1000UL) refresh();
-  if (state.messageUntil && millis() > state.messageUntil) {
+  // One source per pass keeps each loop() stall to a single HTTP timeout.
+  switch (pending) {
+    case 1: fetchWeather(); pending++; break;
+    case 2: fetchCalendar(); pending++; break;
+    case 3: fetchHomebridge(); pending = 0; break;
+  }
+  if (state.messageUntil && (int32_t)(millis() - state.messageUntil) >= 0) {
     state.message = "";
     state.messageUntil = 0;
   }
@@ -30,14 +36,12 @@ void DataHub::loop() {
 
 void DataHub::refresh() {
   lastRefresh = millis();
-  fetchWeather();
-  fetchCalendar();
-  fetchHomebridge();
+  pending = 1;
 }
 
 void DataHub::notify(const String& text, uint32_t seconds) {
   state.message = text.substring(0, 80);
-  state.messageUntil = millis() + seconds * 1000UL;
+  state.messageUntil = (millis() + seconds * 1000UL) | 1;  // never 0 (0 = no message)
 }
 
 void DataHub::fetchWeather() {
@@ -45,9 +49,11 @@ void DataHub::fetchWeather() {
   if (!body.length()) return;
   JsonDocument doc;
   if (deserializeJson(doc, body)) return;
-  // Open-Meteo compatible: current.temperature_2m
+  // Open-Meteo compatible: current.temperature_2m (+ current.weather_code for the icon)
   if (!doc["current"]["temperature_2m"].isNull()) {
-    state.weather = String(doc["current"]["temperature_2m"].as<float>(), 1) + " C";
+    state.temperature = doc["current"]["temperature_2m"].as<float>();
+    state.weatherCode = doc["current"]["weather_code"] | -1;
+    state.weather = String(state.temperature, 1) + " C";
   } else if (!doc["temperature"].isNull()) {
     state.weather = doc["temperature"].as<String>();
   }
