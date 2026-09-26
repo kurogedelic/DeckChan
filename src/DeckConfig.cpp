@@ -22,6 +22,7 @@ String deckConfigJson(bool includeSecret) {
   if (includeSecret) d["homebridgeToken"]=deckConfig.homebridgeToken;
   d["activeBrightness"]=deckConfig.activeBrightness; d["idleBrightness"]=deckConfig.idleBrightness;
   d["nightEnabled"]=deckConfig.nightEnabled; d["nightStart"]=deckConfig.nightStart; d["nightEnd"]=deckConfig.nightEnd;
+  d["motion"]=deckConfig.motionEnabled; d["leds"]=deckConfig.ledsEnabled;
   String out; serializeJson(d,out); return out;
 }
 
@@ -41,6 +42,8 @@ bool updateDeckConfigJson(const String& json) {
   if (d["nightEnabled"].is<bool>()) deckConfig.nightEnabled=d["nightEnabled"];
   if (d["nightStart"].is<int>()) deckConfig.nightStart=constrain(d["nightStart"].as<int>(),0,23);
   if (d["nightEnd"].is<int>()) deckConfig.nightEnd=constrain(d["nightEnd"].as<int>(),0,23);
+  if (d["motion"].is<bool>()) deckConfig.motionEnabled=d["motion"];
+  if (d["leds"].is<bool>()) deckConfig.ledsEnabled=d["leds"];
   applyDeckPalette(); return true;
 }
 

@@ -14,6 +14,14 @@ DeckChan turns Stack-chan into a quiet always-available desk console: a bitmap f
 - Data-source boundary for Weather, Calendar and Homebridge
 - Touch to wake the dashboard; automatic return to idle
 
+## Screens
+
+Rendered on the host from the real drawing code (`sim/render.sh`):
+
+| Idle | Dashboard | Message |
+| --- | --- | --- |
+| ![idle](docs/screens/idle-amber.png) | ![dashboard](docs/screens/dashboard-amber.png) | ![message](docs/screens/message-amber.png) |
+
 ## Design rules
 
 1. Idle is the primary screen. It should feel alive, not busy.
@@ -29,13 +37,15 @@ Target: M5StackChan CoreS3 / CoreS3.
 
 ## Build
 
-This repository starts with a PlatformIO/Arduino prototype using M5Unified and M5GFX.
+PlatformIO/Arduino firmware on M5Unified, M5GFX and the official [StackChan-BSP](https://github.com/m5stack/StackChan-BSP) (servos, head touch panel, RGB LEDs, battery). The BSP needs arduino-esp32 3.x, so the build uses the pioarduino platform.
 
 ```sh
 pio run
 pio run -t upload
 pio device monitor
 ```
+
+To regenerate screenshots without hardware (needs g++, SDL2 headers, Pillow): `sim/render.sh`.
 
 Copy `include/secrets.example.h` to `include/secrets.h` and set Wi-Fi credentials.
 

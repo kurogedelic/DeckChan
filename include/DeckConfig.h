@@ -18,6 +18,8 @@ struct DeckConfig {
   bool nightEnabled = true;
   uint8_t nightStart = 0;
   uint8_t nightEnd = 7;
+  bool motionEnabled = true;  // head nod on wake (servos via StackChan-BSP)
+  bool ledsEnabled = true;    // body RGB LEDs glow while a message is shown
 };
 
 extern DeckConfig deckConfig;

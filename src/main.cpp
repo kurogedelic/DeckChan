@@ -1,8 +1,8 @@
-#include <M5Unified.h>
+#include <M5StackChan.h>
 #include <WiFi.h>
 #include <time.h>
 #include "DeckConfig.h"
-#include "Face.h"
+#include "Screen.h"
 #include "WebEditor.h"
 #include "DataHub.h"
 #include "PowerManager.h"
@@ -13,32 +13,59 @@
 #define DECKCHAN_WIFI_PASSWORD ""
 #endif
 
-M5Canvas canvas(&M5.Display); Face face; WebEditor web;
-uint32_t lastInteraction=0,lastBlink=0; bool blink=false,dashboard=false;
+M5Canvas canvas(&M5.Display); WebEditor web;
+uint32_t lastInteraction=0,lastBlink=0,blinkUntil=0,lastDraw=0; bool dashboard=false,messageShown=false;
 
-static void labelBox(int x,int y,int w,int h,const String& title,const String& value){
-  canvas.drawRect(x,y,w,h,deckConfig.foreground);canvas.setTextSize(1);canvas.drawString(title,x+7,y+7);canvas.setTextSize(2);canvas.drawString(value.substring(0,18),x+7,y+24);
-}
+static int batteryPercent(float v){ return v<1.0f?-1:constrain((int)((v-3.3f)/(4.15f-3.3f)*100),0,100); }
+
 static void drawFrame(){
-  canvas.fillScreen(deckConfig.background);canvas.setTextColor(deckConfig.foreground,deckConfig.background);canvas.setTextDatum(top_left);canvas.setTextFont(1);
-  struct tm t;if(getLocalTime(&t,5)){char s[20];strftime(s,sizeof(s),deckConfig.showSeconds?"%H:%M:%S":"%H:%M",&t);canvas.setTextSize(3);canvas.drawString(s,12,10);}else{canvas.setTextSize(3);canvas.drawString("--:--",12,10);}
-  const auto& d=dataHub.data();
-  if(d.message.length()){canvas.setTextSize(2);canvas.drawRect(8,72,304,96,deckConfig.foreground);canvas.drawString("MESSAGE",18,82);canvas.setTextSize(1);canvas.drawString(d.message,18,118);}
-  else if(!dashboard){face.draw(canvas,128,88,deckConfig.foreground,blink);canvas.setTextSize(1);canvas.drawString("DECKCHAN // IDLE",12,218);}
-  else{canvas.setTextSize(1);canvas.drawString("DASHBOARD",12,58);labelBox(12,76,142,60,"WEATHER",d.weather);labelBox(166,76,142,60,"NEXT",d.calendar);labelBox(12,148,296,54,"HOME",d.home);canvas.drawString(WiFi.status()==WL_CONNECTED?"NET ONLINE":"NET OFFLINE",12,218);}
-  canvas.pushSprite(0,0);
+  char clock[9]="--:--",date[16]=""; struct tm t;
+  if(getLocalTime(&t,5)){strftime(clock,sizeof(clock),deckConfig.showSeconds?"%H:%M:%S":"%H:%M",&t);strftime(date,sizeof(date),"%a %m/%d",&t);for(char* p=date;*p;p++)*p=toupper(*p);}
+  const auto& d=dataHub.data(); ScreenModel m;
+  m.clock=clock; m.date=date; m.weather=d.weather.c_str(); m.calendar=d.calendar.c_str(); m.home=d.home.c_str(); m.message=d.message.c_str();
+  m.dashboard=dashboard; m.blink=millis()<blinkUntil; m.online=WiFi.status()==WL_CONNECTED;
+  m.batteryPercent=batteryPercent(M5StackChan.getBatteryVoltage()); m.charging=M5StackChan.getBatteryCurrent()<-0.01f;
+  m.foreground=deckConfig.foreground; m.background=deckConfig.background;
+  drawScreen(canvas,m); canvas.pushSprite(0,0); lastDraw=millis();
+}
+static bool motionAllowed(){ return deckConfig.motionEnabled&&!powerManager.isNight(); }
+static void setDashboard(bool on){
+  if(on) lastInteraction=millis();
+  if(on==dashboard) return;
+  dashboard=on;
+  if(motionAllowed()){ if(on) M5StackChan.Motion.move(0,150,300); else M5StackChan.Motion.goHome(200); }
+  drawFrame();
+}
+static void updateLeds(){
+  bool show=dataHub.data().message.length()>0;
+  if(show==messageShown) return;
+  messageShown=show; uint16_t c=deckConfig.foreground;
+  // RGB565 -> 8-bit, kept at quarter brightness so the body glows rather than glares.
+  if(show&&deckConfig.ledsEnabled) M5StackChan.showRgbColor(((c>>11)&31)*2,((c>>5)&63),(c&31)*2); else M5StackChan.showRgbColor(0,0,0);
+  if(show) lastInteraction=millis();
+}
+static void networkLoop(){
+  if(WiFi.status()!=WL_CONNECTED||web.isStarted()) return;
+  // Runs once, on the first connection — even if Wi-Fi was down at boot.
+  configTzTime("JST-9","pool.ntp.org","time.google.com"); web.begin(); dataHub.refresh();
 }
 void setup(){
-  auto c=M5.config();M5.begin(c);M5.Display.setRotation(1);loadDeckConfig();M5.Display.setBrightness(deckConfig.activeBrightness);canvas.createSprite(M5.Display.width(),M5.Display.height());
-  WiFi.mode(WIFI_STA);if(strlen(DECKCHAN_WIFI_SSID)){WiFi.begin(DECKCHAN_WIFI_SSID,DECKCHAN_WIFI_PASSWORD);uint32_t s=millis();while(WiFi.status()!=WL_CONNECTED&&millis()-s<10000)delay(100);}
-  if(WiFi.status()==WL_CONNECTED){configTzTime("JST-9","pool.ntp.org","time.google.com");web.begin();}
-  dataHub.begin();powerManager.begin();lastInteraction=millis();drawFrame();
+  M5StackChan.begin(); M5.Display.setRotation(1); loadDeckConfig(); M5.Display.setBrightness(deckConfig.activeBrightness);
+  canvas.createSprite(M5.Display.width(),M5.Display.height());
+  M5StackChan.Motion.setAutoTorqueReleaseEnabled(true);
+  WiFi.mode(WIFI_STA); WiFi.setAutoReconnect(true);
+  if(strlen(DECKCHAN_WIFI_SSID)){WiFi.begin(DECKCHAN_WIFI_SSID,DECKCHAN_WIFI_PASSWORD);uint32_t s=millis();while(WiFi.status()!=WL_CONNECTED&&millis()-s<10000)delay(100);}
+  networkLoop(); dataHub.begin(); powerManager.begin(); lastInteraction=millis(); drawFrame();
 }
 void loop(){
-  M5.update();web.loop();dataHub.loop();auto touch=M5.Touch.getDetail();
-  if(touch.wasPressed()){dashboard=true;lastInteraction=millis();drawFrame();}
-  if(dashboard&&millis()-lastInteraction>deckConfig.idleAfterMs){dashboard=false;drawFrame();}
-  if(!dashboard&&millis()-lastBlink>4500){blink=true;drawFrame();delay(80);blink=false;lastBlink=millis();drawFrame();}
-  static uint32_t tick=0;if(millis()-tick>1000){tick=millis();drawFrame();}
-  powerManager.loop(!dashboard);delay(10);
+  M5StackChan.update(); networkLoop(); web.loop(); dataHub.loop(); updateLeds();
+  auto& head=M5StackChan.TouchSensor;
+  if(M5.Touch.getDetail().wasPressed()||head.wasClicked()) setDashboard(true);
+  if(head.wasSwipedForward()) setDashboard(true);
+  if(head.wasSwipedBackward()) setDashboard(false);
+  if(dashboard&&millis()-lastInteraction>deckConfig.idleAfterMs) setDashboard(false);
+  if(!dashboard&&millis()-lastBlink>4500){ lastBlink=millis(); blinkUntil=lastBlink+80; drawFrame(); }
+  if(blinkUntil&&millis()>=blinkUntil){ blinkUntil=0; drawFrame(); }
+  if(millis()-lastDraw>1000) drawFrame();
+  powerManager.loop(!dashboard); delay(10);
 }

@@ -1,6 +1,6 @@
 #include "Face.h"
 
-void Face::draw(M5Canvas& c, int x, int y, uint16_t color, bool blink) {
+void Face::draw(lgfx::LGFX_Sprite& c, int x, int y, uint16_t color, bool blink) {
   // Deliberately blocky: 8 px grid, no anti-aliasing.
   const int p = 8;
   if (blink) {
